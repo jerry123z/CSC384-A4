@@ -187,16 +187,14 @@ class ExactInference(InferenceModule):
         # Replace this code with a correct observation update
         # Be sure to handle the "jail" edge case where the ghost is eaten
         # and noisyDistance is None
-
         allPossible = util.Counter()
-
+        
+        for p in self.legalPositions:
+            trueDistance = util.manhattanDistance(p, pacmanPosition)
+            if emissionModel[trueDistance] > 0:
+                allPossible[p] = emissionModel[trueDistance]*self.beliefs[p]
         if noisyDistance == None:
-            allPossible[self.getJailPosition()] = 1.0
-        else:
-            for p in self.legalPositions:
-                trueDistance = util.manhattanDistance(p, pacmanPosition)
-                if emissionModel[trueDistance] > 0:
-                    allPossible[p] = emissionModel[trueDistance] * self.beliefs[p]
+            allPossible[self.getJailPosition()] = 1
 
         "*** END YOUR CODE HERE ***"
 
@@ -280,13 +278,24 @@ class ExactInference(InferenceModule):
         """
         "*** YOUR CODE HERE ***"
         allPossible = util.Counter()
-        for oldPos in self.legalPositions:
-            newPosDist = self.getPositionDistribution(self.setGhostPosition(gameState, oldPos))
-            for newPos, prob in newPosDist.items():
-                allPossible[newPos] += prob * self.beliefs[oldPos]
 
+        # iterate through all possible old position
+        for oldPos in self.beliefs:
+            # probability of current location given old position
+            newPosDist = self.getPositionDistribution(self.setGhostPosition(gameState,oldPos))
+            # We must re-evaulate probability distribution of current ghost positions
+            for newPos, prob in newPosDist.items():
+                # for every new position that is possible to be reached from an old position
+                # of a ghost, we add the belief of the old position multiplying the probability
+                # of moving into the new position to the new position
+                allPossible[newPos] += prob*self.beliefs[oldPos]
+
+        # normalize the probabilities
+        allPossible.normalize()
         self.beliefs = allPossible
+
         "*** END YOUR CODE HERE ***"
+
 
     def getBeliefDistribution(self):
         return self.beliefs
@@ -355,6 +364,11 @@ class ParticleFilter(InferenceModule):
         emissionModel = busters.getObservationDistribution(noisyDistance)
         pacmanPosition = gameState.getPacmanPosition()
         "*** YOUR CODE HERE ***"
+
+
+
+
+
         util.raiseNotDefined()
         "*** END YOUR CODE HERE ***"
 
