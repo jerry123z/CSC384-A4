@@ -517,7 +517,7 @@ class JointParticleFilter:
         "*** YOUR CODE HERE ***"
         self.particles = []  # initialize
         starting_positions = list(itertools.product(self.legalPositions, repeat=self.numGhosts))
-
+        random.shuffle(starting_positions)
         sum = 0
 
         while sum < self.numParticles:
@@ -621,11 +621,6 @@ class JointParticleFilter:
             self.particles = new_particles
         else:
             self.initializeParticles()
-            for particle in self.particles:
-                for ghost in range(self.numGhosts):
-                    if noisyDistances[ghost] == None:
-                        p = self.getParticleWithGhostInJail(p, i)
-
         "*** END YOUR CODE HERE ***"
 
 
