@@ -285,6 +285,7 @@ class ExactInference(InferenceModule):
             for newPos, prob in newPosDist.items():
                 allPossible[newPos] += prob * self.beliefs[oldPos]
 
+        allPossible.normalize()
         self.beliefs = allPossible
         "*** END YOUR CODE HERE ***"
 
@@ -321,6 +322,16 @@ class ParticleFilter(InferenceModule):
         weight with each position) is incorrect and may produce errors.
         """
         "*** YOUR CODE HERE ***"
+        total = 0
+        particles = []
+
+        while total < self.numParticles:
+            for position in self.legalPositions:
+                if total < self.numParticles:  # required for num particles less than
+                    particles.append(position)
+                    total += 1
+
+        self.particles = particles
         "*** END YOUR CODE HERE ***"
 
 
@@ -355,7 +366,26 @@ class ParticleFilter(InferenceModule):
         emissionModel = busters.getObservationDistribution(noisyDistance)
         pacmanPosition = gameState.getPacmanPosition()
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        if noisyDistance is None:
+            self.particles = [self.getJailPosition()] * self.numParticles   # list multiplication OP
+        else:
+            oldBelief = self.getBeliefDistribution()
+            allPossible = util.Counter()
+            for location in self.legalPositions:
+                distance = util.manhattanDistance(location, pacmanPosition)
+                allPossible[location] += emissionModel[distance] * oldBelief[location]
+
+            resample = True
+            for i in allPossible:
+                if allPossible[i] > 0:
+                    resample = False
+
+            if resample:
+                self.initializeUniformly(gameState)
+            else:
+                for i in range(len(self.particles)):
+                    newPos = util.nsample(allPossible)
+                    self.particles[i] = newPos
         "*** END YOUR CODE HERE ***"
 
 
@@ -374,7 +404,13 @@ class ParticleFilter(InferenceModule):
         a belief distribution.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        newParticles = []
+        for i in range(len(self.particles)):
+            particle = self.particles[i]
+            newPosDist = self.getPositionDistribution(self.setGhostPosition(gameState, particle))
+            newParticles.append(util.sample(newPosDist))
+
+        self.particles = newParticles
         "*** END YOUR CODE HERE ***"
 
 
@@ -387,7 +423,12 @@ class ParticleFilter(InferenceModule):
         Counter object)
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        belief = util.Counter()
+        for particle in self.particles:
+            belief[particle] += 1
+
+        belief.normalize()
+        return belief
         "*** END YOUR CODE HERE ***"
 
 
@@ -462,7 +503,15 @@ class JointParticleFilter:
         weight with each position) is incorrect and may produce errors.
         """
         "*** YOUR CODE HERE ***"
+        self.particles = []   # initialize
+        permutations = list(itertools.product(self.legalPositions, repeat=self.numGhosts))
+        random.shuffle(permutations)
 
+        p = self.numParticles
+
+        while p >= len(permutations):
+            self.particles.extend(permutations)
+            p -= len(permutations)
         "*** END YOUR CODE HERE ***"
 
 
@@ -530,7 +579,24 @@ class JointParticleFilter:
         emissionModels = [busters.getObservationDistribution(dist) for dist in noisyDistances]
 
         "*** YOUR CODE HERE ***"
+        allPossible = util.Counter()
+        for index, particle in enumerate(self.particles):
+            probability = 1.0
+            for i in range(self.numGhosts):
+                if noisyDistances[i] is None:
+                    particle = self.getParticleWithGhostInJail(particle, i)
+                else:
+                    dist = util.manhattanDistance(particle[i], pacmanPosition)
+                    probability *= emissionModels[i][dist]
+            allPossible[particle] += probability
 
+        if allPossible.totalCount() == 0:
+            self.initializeParticles()
+        else:
+            allPossible.normalize()
+            for i in range(len(self.particles)):
+                newPos = util.sample(allPossible)
+                self.particles[i] = newPos
         "*** END YOUR CODE HERE ***"
 
 
@@ -593,6 +659,10 @@ class JointParticleFilter:
             # now loop through and update each entry in newParticle...
 
             "*** YOUR CODE HERE ***"
+            for i in range(self.numGhosts):
+                distribution = getPositionDistributionForGhost(setGhostPositions(gameState, newParticle), i,
+                                                             self.ghostAgents[i])
+                newParticle[i] = util.sample(distribution)
 
             "*** END YOUR CODE HERE ***"
             newParticles.append(tuple(newParticle))
@@ -600,7 +670,12 @@ class JointParticleFilter:
 
     def getBeliefDistribution(self):
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        belief = util.Counter()
+        for p in self.particles:
+            belief[p] += 1.0
+
+        belief.normalize()
+        return belief
         "*** END YOUR CODE HERE ***"
 
 
