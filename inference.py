@@ -515,22 +515,15 @@ class JointParticleFilter:
         weight with each position) is incorrect and may produce errors.
         """
         "*** YOUR CODE HERE ***"
-        starting_positions = itertools.product(self.legalPositions, repeat = self.numGhosts)
-        # using random.shuffle to get positions
-        random.shuffle(list(starting_positions))
+        self.particles = []  # initialize
+        starting_positions = list(itertools.product(self.legalPositions, repeat=self.numGhosts))
 
-        # initialize particle distribution
-        self.particles = []
         sum = 0
+
         while sum < self.numParticles:
             for position in starting_positions:
                 self.particles.append(position)
                 sum += 1
-
-        # self.particles = []
-        # for position in starting_positions:
-        #     for particle in range(0,self.numParticles):
-        #         self.particles.append(position)
 
         "*** END YOUR CODE HERE ***"
 
@@ -601,15 +594,18 @@ class JointParticleFilter:
         "*** YOUR CODE HERE ***"
         allPossible = util.Counter()
 
-        # deal with one ghost at a time
-        for ghost in range(self.numGhosts):
-            for particle in self.numParticles:
-                if noisyDistance[i] == None:
+
+        for index, particle in enumerate(self.particles):
+            probability = 1.0
+            # deal with one ghost at a time
+            for ghost in range(self.numGhosts):
+                if noisyDistances[ghost] is None:
                     # all particle becomes the jail location
-                    allPossible[particle] = self.getParticleWithGhostInJail(particle, ghost)
+                    particle = self.getParticleWithGhostInJail(particle, ghost)
                 else:
                     trueDistance = util.manhattanDistance(particle[ghost], pacmanPosition)
-                    allPossible[i][location] *= emissionModel[i][trueDistance]
+                    probability *= emissionModels[ghost][trueDistance]
+            allPossible[particle] += probability
 
         # resample when all possible location is 0
         resample = True
@@ -624,7 +620,7 @@ class JointParticleFilter:
                 new_particles.append(util.sample(allPossible))
             self.particles = new_particles
         else:
-            self.initializeUniformly(gameState)
+            self.initializeParticles()
             for particle in self.particles:
                 for ghost in range(self.numGhosts):
                     if noisyDistances[ghost] == None:
@@ -693,7 +689,7 @@ class JointParticleFilter:
 
             "*** YOUR CODE HERE ***"
             for i in range(self.numGhosts):
-                newDist = getPositionDistributionForGhost(setGhostPositions(gameState),i,self.ghostAgents[i])
+                newDist = getPositionDistributionForGhost(setGhostPositions(gameState, newParticle),i,self.ghostAgents[i])
                 newParticle[i] = util.sample(newDist)
             "*** END YOUR CODE HERE ***"
             newParticles.append(tuple(newParticle))
@@ -703,7 +699,7 @@ class JointParticleFilter:
         "*** YOUR CODE HERE ***"
         allPossible = util.Counter()
         for particle in self.particles:
-            allPossible[particle] +=1
+            allPossible[particle] += 1.0
         allPossible.normalize()
         return allPossible
         "*** END YOUR CODE HERE ***"
