@@ -191,8 +191,10 @@ class ExactInference(InferenceModule):
 
         for p in self.legalPositions:
             trueDistance = util.manhattanDistance(p, pacmanPosition)
+            # if the probability of a noisy distance use that to calculate new probabilities
             if emissionModel[trueDistance] > 0:
                 allPossible[p] = emissionModel[trueDistance]*self.beliefs[p]
+        # case where a ghost is in jail
         if noisyDistance == None:
             allPossible[self.getJailPosition()] = 1
 
@@ -517,6 +519,8 @@ class JointParticleFilter:
         "*** YOUR CODE HERE ***"
         self.particles = []  # initialize
         starting_positions = list(itertools.product(self.legalPositions, repeat=self.numGhosts))
+
+        # initialize particle distribution
         random.shuffle(starting_positions)
         sum = 0
 
@@ -616,7 +620,7 @@ class JointParticleFilter:
         if not resample:
             # new set of particles
             new_particles = []
-            for particle in range(0,self.numParticles):
+            for particle in range(0, self.numParticles):
                 new_particles.append(util.sample(allPossible))
             self.particles = new_particles
         else:
